@@ -1,5 +1,5 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import time
 import requests
 import os
@@ -19,20 +19,26 @@ from datetime import datetime
 import asyncio
 import sys
 
+TOKEN = "YOUR TOKEN"
 
-TOKEN = ("YOUR_TOKEN")
-
-
-# Décommentez ces lignes pour activer la fonction `keep_alive` qui permet de garder le bot en ligne en continu sur des serveurs avec des périodes d'inactivité
-#
-#
-#async def keep_alive():
-#    while True:
-#        print("Ping pour éviter l'arrêt !")
-#        await asyncio.sleep(3600)  # Ping toutes les heures
+CHANNEL_ID = YOUR CHANNEL ID
+ROLE_ID = YOUR ROLE ID
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="+", intents=intents, help_command=None)
+
+@tasks.loop(hours=5)  # Exécution toutes les 5 heurs
+async def bump_reminder():
+    await bot.wait_until_ready()
+    print("🔄 bump_reminder est en cours d'exécution...")
+    channel = bot.get_channel(CHANNEL_ID)
+    print(f"Canal récupéré : {channel}")
+    if channel:
+        await channel.send(f"<@&{ROLE_ID}> **N'oubliez pas de bump le serveur avec `/bump` !**")
+    else:
+        print(f"Erreur : Impossible de trouver le canal {CHANNEL_ID}. Vérifie les permissions et l'ID.")
+
+
 
 # Définition de la classe SeekApiClient
 class SeekApiClient:
@@ -47,7 +53,15 @@ class SeekApiClient:
 
 @bot.event
 async def on_ready():
+    print("Le bot est bien connecté !")  # Debug
+    await asyncio.sleep(2)
+    if not bump_reminder.is_running():  # Vérifie si la tâche tourne déjà
+        bump_reminder.start()
+        print("✅ La tâche bump_reminder a été démarrée !")  # Debug
+    else:
+        print("⚠️ La tâche bump_reminder était déjà en cours !")
     print(f"Bot connecté comme {bot.user}")
+
 
 @bot.command()
 async def help(ctx):
@@ -1276,7 +1290,7 @@ async def on_interaction(interaction):
 
 @bot.command()
 async def holehe(ctx, email: str):
-    channel_id = 1328057969493147701            ###########################1328058756969402501##############################
+    channel_id = 1328058756969402501  # Assurez-vous que cet ID est correct
     if ctx.channel.id != channel_id:
         embed_error = discord.Embed(
             title="❌ Commande non autorisée",
@@ -1294,9 +1308,9 @@ async def holehe(ctx, email: str):
     message = await ctx.send(embed=embed_loading)
 
     try:
-        result = subprocess.check_output(["holehe", email], text=True)
+        result = subprocess.run(["holehe", email], capture_output=True, text=True, check=True)
 
-        formatted_result = "\n".join([line for line in result.splitlines()])
+        formatted_result = result.stdout.strip() if result.stdout else "Aucun résultat trouvé."
 
         embed_result = discord.Embed(
             title="Résultat trouvé 🔎",
@@ -1306,22 +1320,27 @@ async def holehe(ctx, email: str):
         embed_result.set_footer(text="⚠️ Vérifiez d'avoir activé vos messages privés !")
         embed_result.set_image(url="https://cdn.discordapp.com/attachments/1286742520021254352/1314232326817054821/wldb_banner.png")
 
-        await ctx.author.send(embed=embed_result)
-
-        embed_done = discord.Embed(
-            title="Résultat trouvé 🔎, vérifiez vos DMs !",
-            description="**⚠️ Vérifiez d'avoir activé vos messages privés !**",
-            color=0xFF0000
-        )
-        embed_done.set_image(url="https://cdn.discordapp.com/attachments/1286742520021254352/1314232326817054821/wldb_banner.png")  # Image ajoutée ici
-        await message.edit(embed=embed_done)
+        try:
+            await ctx.author.send(embed=embed_result)
+            embed_done = discord.Embed(
+                title="Résultat trouvé 🔎, vérifiez vos DMs !",
+                description="**⚠️ Vérifiez d'avoir activé vos messages privés !**",
+                color=0xFF0000
+            )
+            embed_done.set_image(url="https://cdn.discordapp.com/attachments/1286742520021254352/1314232326817054821/wldb_banner.png")  # Image ajoutée ici
+            await message.edit(embed=embed_done)
+        except discord.Forbidden:
+            await message.edit(embed=discord.Embed(
+                title="Erreur ❌",
+                description="Impossible d'envoyer le résultat en DM. Vérifiez vos paramètres de confidentialité.",
+                color=0xFF0000
+            ))
 
     except subprocess.CalledProcessError as e:
+        error_message = e.output if e.output else "Erreur inconnue lors de l'exécution."
         embed_error = discord.Embed(
             title="Erreur 🚨",
-            #description=f"Une erreur est survenue lors de l'exécution de Holehe : `{e.output.decode()}`",
-            description=f"Une erreur est survenue lors de l'exécution de Holehe : `{e.output}`",
-
+            description=f"Une erreur est survenue lors de l'exécution de Holehe :\n```\n{error_message}\n```",
             color=0xFF0000
         )
         await message.edit(embed=embed_error)
@@ -1329,7 +1348,7 @@ async def holehe(ctx, email: str):
     except Exception as e:
         embed_error = discord.Embed(
             title="Erreur inconnue",
-            description=f"Une erreur inattendue s'est produite : `{e}`",
+            description=f"Une erreur inattendue s'est produite : `{str(e)}`",
             color=0xFF0000
         )
         await message.edit(embed=embed_error)
@@ -1638,10 +1657,9 @@ async def seekbase(ctx, *, search_string: str):
         await ctx.send(embed=embed_error)
 
 
-@bot.command(name="stop")
-async def stop(ctx):
-    """Arrête le bot uniquement dans le salon autorisé."""
-    if ctx.channel.id == 1328057969493147701:  # ID du canal autorisé
+
+async def seekbase(ctx, *, search_string: str):
+    if ctx.channel.id != AUTHORIZED_CHANNEL_ID:
         embed_error = discord.Embed(
             title="Commande non autorisée",
             description="Cette commande ne peut être utilisée que dans le canal autorisé.",
@@ -1651,38 +1669,52 @@ async def stop(ctx):
         logging.warning(f"Tentative d'utilisation de la commande 'search' dans un canal non autorisé par {ctx.author} (ID: {ctx.author.id}).")
         return
 
-        await ctx.send("Arrêt du bot en cours...")
-        await asyncio.sleep(1)
-        await ctx.send("Bot arrêté.")
-        await bot.close()
 
 
 
 
-#async def seekbase(ctx, *, search_string: str):
-#    if ctx.channel.id != AUTHORIZED_CHANNEL_ID:
-#        embed_error = discord.Embed(
-#            title="Commande non autorisée",
-#            description="Cette commande ne peut être utilisée que dans le canal autorisé.",
-#            color=discord.Color.red()
-#        )
-#        await ctx.send(embed=embed_error)
-#        logging.warning(f"Tentative d'utilisation de la commande 'search' dans un canal non autorisé par {ctx.author} (ID: {ctx.author.id}).")
-#        return
 
 
 
-        
+    
 
-@bot.command()
+
+@bot.command(name="stop")
+async def stop(ctx):
+    """Arrête le bot uniquement dans le salon autorisé."""
+    if ctx.channel.id != 1328058756969402501:  # ID du canal autorisé
+        embed_error = discord.Embed(
+            title="Commande non autorisée",
+            description="Cette commande ne peut être utilisée que dans le canal autorisé.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed_error)
+        return
+
+    await ctx.send("Arrêt du bot en cours...")
+    await asyncio.sleep(1)
+    await ctx.send("Bot arrêté.")
+    await bot.close()
+    
+
+@bot.command(name="reboot")
 async def reboot(ctx):
     """Redémarre le bot uniquement dans le salon autorisé."""
-    if ctx.channel.id == 1328057969493147701:  # ID du canal autorisé
-        await ctx.send("Redémarrage du bot en cours...")
-        os.execl(sys.executable, sys.executable, *sys.argv)
-        await asyncio.sleep(1.5)
-        await ctx.send("Le bot a redémarré correctement.")
+    if ctx.channel.id != 1328058756969402501:  # ID du canal autorisé
+        embed_error = discord.Embed(
+            title="Commande non autorisée",
+            description="Cette commande ne peut être utilisée que dans le canal autorisé.",
+            color=discord.Color.red()
+        )
+        await ctx.send(embed=embed_error)
+        return
+
+    await ctx.send("Redémarrage du bot en cours...")
+    await asyncio.sleep(1.5)
+    await ctx.send("Redémarrage terminer.")
+    os.execl(sys.executable, sys.executable, *sys.argv)
+
+
 
 
 bot.run(TOKEN)
-
