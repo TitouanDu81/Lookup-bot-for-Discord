@@ -18,26 +18,72 @@ import base64
 from datetime import datetime
 import asyncio
 import sys
+import discord
+from discord.ext import commands, tasks
+import logging
+from datetime import datetime
+import asyncio
 
-TOKEN = "YOUR TOKEN"
+# Configurer les logs
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-CHANNEL_ID = YOUR CHANNEL ID
-ROLE_ID = YOUR ROLE ID
+TOKEN = "YOUR_TOKEN"
+CHANNEL_ID_BUMP = 1295786617428119664
+CHANNEL_ID = 1328058756969402501
+ROLE_ID = 1345067345911222443
 
-intents = discord.Intents.all()
+
+intents = discord.Intents.all()  # Permissions pour l'accès aux événements du bot
 bot = commands.Bot(command_prefix="+", intents=intents, help_command=None)
 
-@tasks.loop(hours=5)  # Exécution toutes les 5 heurs
+@tasks.loop(hours=5)  # Rappel toutes les 5 heures
 async def bump_reminder():
     await bot.wait_until_ready()
-    print("🔄 bump_reminder est en cours d'exécution...")
-    channel = bot.get_channel(CHANNEL_ID)
-    print(f"Canal récupéré : {channel}")
-    if channel:
-        await channel.send(f"<@&{ROLE_ID}> **N'oubliez pas de bump le serveur avec `/bump` !**")
-    else:
-        print(f"Erreur : Impossible de trouver le canal {CHANNEL_ID}. Vérifie les permissions et l'ID.")
+    logger.info("bump_reminder est en cours d'exécution...")
 
+    channel = bot.get_channel(CHANNEL_ID_BUMP)
+    if channel:
+        try:
+            # Envoie du message de rappel
+            #await channel.send(f"<@&{ROLE_ID}> **N'oubliez pas de bump le serveur avec `/bump` !**")
+            logger.info(f"Message de rappel envoyé avec succès dans le canal {CHANNEL_ID_BUMP}.")
+        except discord.errors.Forbidden:
+            logger.error(f"Erreur : Le bot n'a pas la permission d'envoyer des messages dans le canal {CHANNEL_ID_BUMP}.")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'envoi du message dans le canal {CHANNEL_ID_BUMP}: {e}")
+    else:
+        logger.error(f"Erreur : Impossible de trouver le canal {CHANNEL_ID_BUMP}. Vérifie les permissions et l'ID.")
+
+@bot.event
+async def on_ready():
+    logger.info(f"{bot.user} a bien été connecté !")  ###############################################################
+    await asyncio.sleep(1)
+
+    # Vérifier si la tâche bump_reminder est déjà en cours, sinon on la démarre
+    if not bump_reminder.is_running():
+        bump_reminder.start()
+        logger.info("La tâche bump_reminder a été démarrée !")
+    else:
+        logger.warning("La tâche bump_reminder était déjà en cours !")
+
+    logger.info(f"Bot connecté comme {bot.user}")    ###############################################################
+
+    # Envoyer un message de bienvenue dans un canal spécifique
+    channel = bot.get_channel(CHANNEL_ID)
+    if channel:
+        try:
+            current_date = datetime.now().strftime("%d-%m-%Y")
+            current_time = datetime.now().strftime("%H:%M:%S")
+            # Envoi du message dans le canal
+            await channel.send(f"**Bot connecté en tant que** `{bot.user.name}` **le** `{current_date}` **à** `{current_time}` **avec succès ! 🚀**")
+            logger.info(f"Message de bienvenue envoyé avec succès dans le canal {CHANNEL_ID}.")
+        except discord.errors.Forbidden:
+            logger.error(f"Erreur : Le bot n'a pas la permission d'envoyer des messages dans le canal {CHANNEL_ID}.")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'envoi du message de bienvenue dans le canal {CHANNEL_ID}: {e}")
+    else:
+        logger.error(f"Erreur : Impossible de trouver le canal {CHANNEL_ID}. Vérifie l'ID et les permissions.")
 
 
 # Définition de la classe SeekApiClient
@@ -50,18 +96,6 @@ class SeekApiClient:
         # Cette méthode doit retourner les documents trouvés
         # Pour l'exemple, nous retournons une liste vide
         return []
-
-@bot.event
-async def on_ready():
-    print("Le bot est bien connecté !")  # Debug
-    await asyncio.sleep(2)
-    if not bump_reminder.is_running():  # Vérifie si la tâche tourne déjà
-        bump_reminder.start()
-        print("✅ La tâche bump_reminder a été démarrée !")  # Debug
-    else:
-        print("⚠️ La tâche bump_reminder était déjà en cours !")
-    print(f"Bot connecté comme {bot.user}")
-
 
 @bot.command()
 async def help(ctx):
@@ -476,7 +510,7 @@ async def fivem(ctx, *, keyword):
             description=f"Cette commande ne peut être utilisée que dans le salon : <#{ALLOWED_CHANNEL_ID}>",
             color=0xFF0000
         )
-        embed_error.set_footer(text=".gg/leak2internet")
+        embed_error.set_footer(text=".gg/kkuU6CbQBG")
         await ctx.send(embed=embed_error)
         return
 
@@ -492,7 +526,7 @@ async def fivem(ctx, *, keyword):
     ascii_art = r"""
    _____                     _     ______ _____  
   / ____|                   | |   |  ____|  __ \ 
- | (___   ___  __ _ _ __ ___| |__ | |__  | |__) | .gg/leak2internet
+ | (___   ___  __ _ _ __ ___| |__ | |__  | |__) | .gg/kkuU6CbQBG
   \___ \ / _ \/ _` | '__/ __| '_ \|  __| |  _  / 
   ____) |  __/ (_| | | | (__| | | | |    | | \ \ 
  |_____/ \___|\__,_|_|  \___|_| |_|_|    |_|  \_\
@@ -565,7 +599,7 @@ async def fivemip(ctx, *, keyword):
   / ____|                   | |   |  ____|  __ \ 
  | (___   ___  __ _ _ __ ___| |__ | |__  | |__) |
   \___ \ / _ \/ _` | '__/ __| '_ \|  __| |  _  / 
-  ____) |  __/ (_| | | | (__| | | | |    | | \ \  .gg/leak2internet
+  ____) |  __/ (_| | | | (__| | | | |    | | \ \  .gg/kkuU6CbQBG
  |_____/ \___|\__,_|_|  \___|_| |_|_|    |_|  \_\
                                                  
     """
@@ -617,7 +651,7 @@ DEFAULT_AVATAR_URL = "https://steamcdn-a.akamaihd.net/steamcommunity/public/imag
 
 @bot.command()
 async def steam(ctx, steam_id: str):
-    if ctx.channel.id != 1286742520021254352:
+    if ctx.channel.id != 1328058756969402501:
         error_embed = discord.Embed(
             title="Erreur",
             description="Cette commande ne peut être exécutée que dans le canal spécifié.",
@@ -693,7 +727,7 @@ EMBED_COLOR = 0xFF0000
 
 @bot.command(name='github')
 async def github(ctx, username: str):
-    if ctx.channel.id != 1314285291225481231:
+    if ctx.channel.id != 1328058756969402501:
         error_embed = discord.Embed(
             title="Erreur",
             description="Cette commande ne peut être exécutée que dans le canal spécifié.",
@@ -787,7 +821,7 @@ def google_dork_search(query):
 
 @bot.command()
 async def dork(ctx, *, keyword):
-    if ctx.channel.id != 1314285291225481231:
+    if ctx.channel.id != 1328058756969402501:
         error_embed = discord.Embed(
             title="Erreur",
             description="Cette commande ne peut être exécutée que dans le canal spécifié.",
@@ -824,7 +858,7 @@ AVATAR_API_URL = "https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds
 
 @bot.command()
 async def roblox(ctx, username: str):
-    if ctx.channel.id != 1314285291225481231:
+    if ctx.channel.id != 1328058756969402501:
         error_embed = discord.Embed(
             title="Erreur",
             description="Cette commande ne peut être exécutée que dans le canal spécifié.",
@@ -949,9 +983,9 @@ async def snusbase(ctx, *, terms: str):
     ascii_header = """\
 
 
-#.gg/leak2internet
+#.gg/kkuU6CbQBG
                          
-                        discord.gg/leak2internet                            
+                        discord.gg/kkuU6CbQBG                           
 
 """
 
@@ -1357,7 +1391,7 @@ ALLOWED_CHANNEL_ID = 1328058756969402501 # ID du canal autorisé
 
 @bot.command()
 async def sherlock(ctx, username: str):
-    if str(ctx.channel.id) != str(1295433544109265018):
+    if str(ctx.channel.id) != str(1328058756969402501):
         await ctx.send(embed=discord.Embed(
             title="Erreur",
             description="Cette commande ne peut être utilisée que dans un salon spécifique.",
@@ -1533,7 +1567,7 @@ async def userinfo(ctx, user_id: int):
     embed.add_field(name="Bot ?", value=is_bot, inline=False)
     embed.add_field(name="Badges", value=", ".join(badges), inline=False)
     embed.set_thumbnail(url=avatar_url)
-    embed.set_footer(text=".gg/leak2internet")
+    embed.set_footer(text=".gg/kkuU6CbQBG")
 
     await ctx.send(embed=embed)
 
@@ -1672,13 +1706,6 @@ async def seekbase(ctx, *, search_string: str):
 
 
 
-
-
-
-
-    
-
-
 @bot.command(name="stop")
 async def stop(ctx):
     """Arrête le bot uniquement dans le salon autorisé."""
@@ -1697,7 +1724,7 @@ async def stop(ctx):
     await bot.close()
     
 
-@bot.command(name="reboot")
+@bot.command(name="restart")
 async def reboot(ctx):
     """Redémarre le bot uniquement dans le salon autorisé."""
     if ctx.channel.id != 1328058756969402501:  # ID du canal autorisé
@@ -1713,8 +1740,5 @@ async def reboot(ctx):
     await asyncio.sleep(1.5)
     await ctx.send("Redémarrage terminer.")
     os.execl(sys.executable, sys.executable, *sys.argv)
-
-
-
 
 bot.run(TOKEN)
