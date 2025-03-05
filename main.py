@@ -46,7 +46,7 @@ async def bump_reminder():
     if channel:
         try:
             # Envoie du message de rappel
-            #await channel.send(f"<@&{ROLE_ID}> **N'oubliez pas de bump le serveur avec `/bump` !**")
+            await channel.send(f"<@&{ROLE_ID}> **N'oubliez pas de bump le serveur avec `/bump` !**")
             logger.info(f"Message de rappel envoyé avec succès dans le canal {CHANNEL_ID_BUMP}.")
         except discord.errors.Forbidden:
             logger.error(f"Erreur : Le bot n'a pas la permission d'envoyer des messages dans le canal {CHANNEL_ID_BUMP}.")
@@ -57,7 +57,7 @@ async def bump_reminder():
 
 @bot.event
 async def on_ready():
-    logger.info(f"{bot.user} a bien été connecté !")  ###############################################################
+    logger.info(f"{bot.user} a bien été connecté !")
     await asyncio.sleep(1)
 
     # Vérifier si la tâche bump_reminder est déjà en cours, sinon on la démarre
@@ -67,7 +67,7 @@ async def on_ready():
     else:
         logger.warning("La tâche bump_reminder était déjà en cours !")
 
-    logger.info(f"Bot connecté comme {bot.user}")    ###############################################################
+    logger.info(f"Bot connecté comme {bot.user}")
 
     # Envoyer un message de bienvenue dans un canal spécifique
     channel = bot.get_channel(CHANNEL_ID)
